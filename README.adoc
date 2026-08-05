@@ -1,0 +1,60 @@
+= MCP Authorization Server
+:toc:
+:toclevels: 2
+
+Rust製のMCPサーバーへ組み込むOAuth Authorization Serverの中核ライブラリーです。
+HTTPフレームワーク、データベース、Identity Provider、製品固有のdomain modelから独立しています。
+
+== 提供するcrate
+
+``mcp-authorization-server``::
+Authorization Code、PKCE S256、resourceとscopeの検査、不透明token、refresh token rotation、
+token familyの失効、取消を扱う中核crateです。
+
+``mcp-authorization-server-cimd``::
+Client ID Metadata DocumentをHTTPSから取得するadapterです。DNS rebindingを含むSSRF、redirect、
+過大な応答、過剰な同時取得と繰り返し取得を制限します。
+
+== 配布状態
+
+v0.1系列は公開APIを評価する段階です。crates.ioには公開せず、利用側は監査済みcommitを
+Git revisionとして固定します。二つのcrateは同じversionで管理します。
+
+[source,toml]
+----
+[dependencies]
+mcp-authorization-server = {
+  git = "https://github.com/KeishiS/mcp-authorization-server.git",
+  rev = "<監査済みcommit>"
+}
+mcp-authorization-server-cimd = {
+  git = "https://github.com/KeishiS/mcp-authorization-server.git",
+  rev = "<同じcommit>"
+}
+----
+
+== 組み込み時の責務
+
+利用側は``Repository``、``Clock``、``Random``を実装し、``ResourcePolicy``と
+``AuthorizationServerConfig``を指定します。保存adapterには
+``testkit::assert_repository_contract``を適用してください。この契約試験は、認可codeとrefresh tokenの
+一回消費、期限、resource binding、再利用時のtoken family失効、取消を確認します。
+
+利用者の本人確認、同意画面、Cookie session、HTTP endpoint、scopeとMCP操作の対応、製品内の
+アクセス制御はこのライブラリーの責務ではありません。
+
+設計境界と安全上の不変条件はxref:docs/architecture.adoc[設計]、更新方法は
+xref:docs/maintenance.adoc[保守手順]を参照してください。
+
+== 開発
+
+[source,shell]
+----
+cargo make verify
+----
+
+詳しい手順はxref:CONTRIBUTING.adoc[コントリビューションガイド]を参照してください。
+
+== ライセンス
+
+MIT LicenseまたはApache License 2.0のいずれかを選択できます。

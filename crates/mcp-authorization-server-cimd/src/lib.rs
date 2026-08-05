@@ -1,5 +1,7 @@
 //! Client ID Metadata Documentを安全な境界内で取得するadapter。
 
+#![deny(missing_docs)]
+
 use std::{
     collections::{HashMap, VecDeque},
     net::{IpAddr, Ipv4Addr, Ipv6Addr},
@@ -26,6 +28,10 @@ const MAX_CLIENT_FLIGHTS: usize = 1_024;
 type FetchResult = Result<Option<Client>, ClientMetadataResolverError>;
 type ClientFlight = tokio::sync::OnceCell<FetchResult>;
 
+/// HTTPSのClient ID Metadata Documentを取得し、検証済みclientとして返すresolver。
+///
+/// DNS解決結果の全addressを検査して接続先を固定し、redirectを拒否する。本文長、所要時間、
+/// 同時取得数、時間当たりの取得回数、cache件数にも上限を設ける。
 pub struct HttpClientMetadataResolver {
     timeout: Duration,
     state: tokio::sync::Mutex<ResolverState>,
@@ -134,6 +140,7 @@ impl ClientMetadataFailure {
 }
 
 impl HttpClientMetadataResolver {
+    /// 外部取得全体に適用するtimeoutからresolverを作る。
     pub fn new(timeout: Duration) -> Self {
         Self {
             timeout,

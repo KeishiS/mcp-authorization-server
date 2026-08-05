@@ -7,16 +7,23 @@ use crate::{
     ValidatedDynamicClientRegistration,
 };
 
+/// resource policyを作れない理由。
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ResourcePolicyError {
+    /// resource URIが絶対HTTP(S) URLではない状態。
     InvalidResourceUri,
+    /// 表示名が空、長すぎる、または制御文字を含む状態。
     InvalidDisplayName,
+    /// 対応scopeまたは既定scopeが不正な状態。
     InvalidScopes,
 }
 
+/// 保存値からscope上限を作れない理由。
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ScopeCeilingsError {
+    /// 主体上限に重複、未対応scope、または不正なscopeがある状態。
     InvalidPrincipalCeiling,
+    /// client上限に重複、未対応scope、または不正なscopeがある状態。
     InvalidClientCeiling,
 }
 
@@ -42,10 +49,12 @@ pub struct ScopeCeilings {
 }
 
 impl ScopeCeilings {
+    /// 主体に発行できるscopeの上限を返す。
     pub fn principal(&self) -> &[String] {
         &self.principal
     }
 
+    /// clientに発行できるscopeの上限を返す。
     pub fn client(&self) -> &[String] {
         &self.client
     }
@@ -73,6 +82,7 @@ pub struct ResourcePolicy {
 }
 
 impl ResourcePolicy {
+    /// resourceの識別情報とscopeを検証し、正規化したpolicyを作る。
     pub fn new(
         uri: String,
         display_name: String,
@@ -113,26 +123,32 @@ impl ResourcePolicy {
         })
     }
 
+    /// 保護対象の正規化済みresource URIを返す。
     pub fn uri(&self) -> &Url {
         &self.uri
     }
 
+    /// resource metadataへ公開する表示名を返す。
     pub fn display_name(&self) -> &str {
         &self.display_name
     }
 
+    /// 発行できる全scopeを正規順で返す。
     pub fn supported_scopes(&self) -> &[String] {
         &self.supported_scopes
     }
 
+    /// 認可要求がscopeを省略したときに使うscopeを返す。
     pub fn default_scopes(&self) -> &[String] {
         &self.default_scopes
     }
 
+    /// 受け取ったresource URIがpolicyのURIと完全一致するかを返す。
     pub fn resource_uri_matches(&self, received: &str) -> bool {
         Url::parse(received).is_ok_and(|received| received == self.uri)
     }
 
+    /// 要求scopeを検証し、policyの順序へ正規化する。
     pub fn resolve_scopes(&self, requested: &[String]) -> Option<Vec<String>> {
         if requested.is_empty() {
             return Some(self.default_scopes.clone());
@@ -143,6 +159,7 @@ impl ResourcePolicy {
             .then(|| canonical_scopes(requested, &self.supported_scopes))
     }
 
+    /// 主体とclientの保存値を検証し、区別したscope上限を作る。
     pub fn scope_ceilings(
         &self,
         principal: Vec<String>,
@@ -192,6 +209,7 @@ fn validate_scope_ceiling(scopes: &[String], supported_scopes: &[String]) -> Res
     Ok(())
 }
 
+/// scope集合を対応scopeの宣言順へ並べ、未対応値を除く。
 pub fn canonical_scopes(scopes: &[String], supported_scopes: &[String]) -> Vec<String> {
     supported_scopes
         .iter()
@@ -200,10 +218,12 @@ pub fn canonical_scopes(scopes: &[String], supported_scopes: &[String]) -> Vec<S
         .collect()
 }
 
+/// PKCE verifierからBase64url表現のS256 challengeを計算する。
 pub fn pkce_s256(verifier: &str) -> String {
     URL_SAFE_NO_PAD.encode(Sha256::digest(verifier.as_bytes()))
 }
 
+/// 値がPKCE S256 challengeの長さと文字集合を満たすかを返す。
 pub fn valid_pkce_challenge(value: &str) -> bool {
     value.len() == 43
         && value
@@ -211,6 +231,7 @@ pub fn valid_pkce_challenge(value: &str) -> bool {
             .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_'))
 }
 
+/// 値がRFC 7636のPKCE verifier範囲を満たすかを返す。
 pub fn valid_pkce_verifier(value: &str) -> bool {
     (43..=128).contains(&value.len())
         && value
@@ -218,6 +239,7 @@ pub fn valid_pkce_verifier(value: &str) -> bool {
             .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'.' | b'_' | b'~'))
 }
 
+/// client metadataの長さ、文字、redirect URIを検証する。
 pub fn validate_client_metadata(client: &Client) -> Result<(), AuthorizationClientError> {
     if client.client_id.is_empty()
         || client.client_id.len() > 2_048
@@ -242,6 +264,7 @@ pub fn validate_client_metadata(client: &Client) -> Result<(), AuthorizationClie
     Ok(())
 }
 
+/// 動的client登録要求を対応範囲へ限定し、保存可能なclient情報へ変換する。
 pub fn validate_dynamic_client_registration(
     request: DynamicClientRegistrationRequest,
     client_id: String,
@@ -279,12 +302,16 @@ pub fn validate_dynamic_client_registration(
     })
 }
 
+/// client metadataを拒否した理由。
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum AuthorizationClientError {
+    /// client ID、表示名または件数が不正な状態。
     InvalidMetadata,
+    /// redirect URIが安全な対応範囲外である状態。
     InvalidRedirectUri,
 }
 
+/// 値がHTTPSのClient ID Metadata Document URLとして安全な形式かを返す。
 pub fn valid_client_metadata_document_url(value: &str) -> bool {
     let Ok(url) = Url::parse(value) else {
         return false;
@@ -316,6 +343,9 @@ pub fn valid_client_metadata_document_url(value: &str) -> bool {
         && !has_dot_segment
 }
 
+/// 要求URIが登録URIと一致するかを返す。
+///
+/// loopback HTTP URIでは、native clientが実行時に選ぶportだけを一致判定から除く。
 pub fn redirect_uri_matches(registered: &str, requested: &str) -> bool {
     if registered == requested {
         return true;
@@ -352,6 +382,7 @@ fn has_duplicates(values: &[String]) -> bool {
         .any(|(index, value)| values[..index].contains(value))
 }
 
+/// 値がHTTPSまたはloopback HTTPのredirect URIとして安全な形式かを返す。
 pub fn valid_redirect_uri(value: &str) -> bool {
     let Ok(url) = Url::parse(value) else {
         return false;

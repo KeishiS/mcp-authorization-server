@@ -1,0 +1,73 @@
+[config]
+default_to_workspace = false
+skip_core_tasks = true
+
+[tasks.default]
+alias = "verify"
+
+[tasks.fmt]
+command = "cargo"
+args = ["fmt", "--all"]
+
+[tasks.fmt-check]
+command = "cargo"
+args = ["fmt", "--all", "--", "--check"]
+
+[tasks.check]
+command = "cargo"
+args = ["check", "--workspace", "--all-targets", "--all-features"]
+
+[tasks.clippy]
+command = "cargo"
+args = ["clippy", "--workspace", "--all-targets", "--all-features", "--", "-D", "warnings"]
+
+[tasks.test]
+command = "cargo"
+args = ["test", "--workspace", "--all-features"]
+
+[tasks.doc-check]
+env = { "RUSTDOCFLAGS" = "-D warnings" }
+command = "cargo"
+args = ["doc", "--workspace", "--all-features", "--no-deps"]
+
+[tasks.docs-check]
+script_runner = "@shell"
+script = "bash tools/check-docs.sh"
+
+[tasks.dependency-boundaries]
+script_runner = "@shell"
+script = "bash tools/check-dependency-boundaries.sh"
+
+[tasks.unused-dependencies]
+command = "cargo"
+args = ["machete", "--with-metadata"]
+
+[tasks.security-audit]
+command = "cargo"
+args = ["audit", "--deny", "warnings"]
+
+[tasks.actionlint]
+command = "actionlint"
+args = [".github/workflows/ci.yml", ".github/workflows/security-audit.yml"]
+
+[tasks.release-metadata]
+script_runner = "@shell"
+script = "bash tools/check-release-metadata.sh"
+
+[tasks.verify]
+dependencies = [
+    "fmt-check",
+    "check",
+    "clippy",
+    "test",
+    "doc-check",
+    "docs-check",
+    "dependency-boundaries",
+    "unused-dependencies",
+    "security-audit",
+    "actionlint",
+    "release-metadata",
+]
+
+[tasks.release-gate]
+dependencies = ["verify"]

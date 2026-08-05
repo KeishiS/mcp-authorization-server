@@ -2,6 +2,8 @@
 //!
 //! HTTP framework、database、identity provider、利用製品のdomain型には依存しない。
 
+#![deny(missing_docs)]
+
 mod core;
 mod metadata;
 mod policy;

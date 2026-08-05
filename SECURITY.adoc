@@ -1,0 +1,8 @@
+= セキュリティーポリシー
+
+脆弱性を公開Issueへ記載しないでください。GitHubの
+https://github.com/KeishiS/mcp-authorization-server/security/advisories/new[非公開の脆弱性報告]
+から、影響するversion、再現方法、想定される影響を連絡してください。
+
+修正版はこのリポジトリで公開します。利用側は修正commitへ依存revisionを更新し、各製品の契約試験を
+実行してください。

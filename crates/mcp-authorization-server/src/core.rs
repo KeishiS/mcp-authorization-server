@@ -12,15 +12,18 @@ use crate::{
     valid_redirect_uri, validate_client_metadata,
 };
 
+/// repository操作を完了できなかったことを表す境界エラー。
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct RepositoryError;
 
+/// Client ID Metadata Documentを解決できなかったことを表す境界エラー。
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ClientMetadataResolverError;
 
 /// client、code、token familyを原子的に保存する外向きport。
 #[async_trait]
 pub trait Repository: Send + Sync {
+    /// 上限を超えない場合だけclientを登録し、登録できたかを返す。
     async fn register_client_bounded(
         &self,
         client: &Client,
@@ -28,6 +31,7 @@ pub trait Repository: Send + Sync {
         maximum_clients: i64,
     ) -> Result<bool, RepositoryError>;
 
+    /// client IDに対応する登録済みclientを返す。
     async fn client(&self, client_id: &str) -> Result<Option<RegisteredClient>, RepositoryError>;
 
     /// 認可codeを保存する。`client`は同じtransactionで登録し、外部keyを満たす。
@@ -65,6 +69,7 @@ pub trait Repository: Send + Sync {
         now: Timestamp,
     ) -> Result<Option<AuthenticatedPrincipal>, RepositoryError>;
 
+    /// 主体とclientの組に属する全token familyを失効させる。
     async fn revoke_client_tokens(
         &self,
         issuer: &str,
@@ -73,6 +78,7 @@ pub trait Repository: Send + Sync {
         now: Timestamp,
     ) -> Result<(), RepositoryError>;
 
+    /// tokenを含むclient grantのtoken familyを失効させる。
     async fn revoke_token(
         &self,
         token: &str,
@@ -84,28 +90,38 @@ pub trait Repository: Send + Sync {
 /// HTTPSのClient ID Metadata Documentを取得する外向きport。
 #[async_trait]
 pub trait ClientMetadataResolver: Send + Sync {
+    /// client ID URLを取得・検証し、client情報を返す。
     async fn resolve(&self, client_id: &str)
     -> Result<Option<Client>, ClientMetadataResolverError>;
 }
 
+/// Authorization Serverへ現在時刻を供給するport。
 pub trait Clock: Send + Sync {
+    /// 現在時刻をUnix epochからのミリ秒で返す。
     fn now(&self) -> Timestamp;
 }
 
 /// 実装は暗号学的に安全な乱数を使う。試験実装は決定的な値を供給できる。
 pub trait Random: Send + Sync {
+    /// 推測できない十分な長さの不透明tokenを作る。
     fn opaque_token(&self) -> String;
 }
 
+/// token、認可code、動的clientの運用上限。
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct AuthorizationServerConfig {
+    /// access tokenの有効秒数。
     pub access_token_seconds: u64,
+    /// refresh tokenの有効秒数。
     pub refresh_token_seconds: u64,
+    /// 認可codeの有効秒数。
     pub authorization_code_seconds: u64,
+    /// repositoryへ保存できる動的client数の上限。
     pub maximum_dynamic_clients: i64,
 }
 
 impl AuthorizationServerConfig {
+    /// すべての寿命と上限が正の場合だけ設定を作る。
     pub const fn new(
         access_token_seconds: u64,
         refresh_token_seconds: u64,
@@ -139,6 +155,7 @@ pub struct AuthorizationServer {
 }
 
 impl AuthorizationServer {
+    /// 必須port、resource policy、運用上限からAuthorization Serverを作る。
     pub fn new(
         repository: Arc<dyn Repository>,
         clock: Arc<dyn Clock>,
@@ -156,6 +173,7 @@ impl AuthorizationServer {
         }
     }
 
+    /// Client ID Metadata Documentを解決する任意adapterを設定する。
     pub fn with_client_metadata_resolver(
         mut self,
         resolver: Arc<dyn ClientMetadataResolver>,
@@ -164,6 +182,7 @@ impl AuthorizationServer {
         self
     }
 
+    /// 検証済みの公開clientをrepositoryの上限内で登録する。
     pub async fn register_client(&self, client: Client) -> Result<(), AuthorizationError> {
         map_client_metadata_error(validate_client_metadata(&client))?;
         let registered = self
@@ -181,6 +200,7 @@ impl AuthorizationServer {
         Ok(())
     }
 
+    /// 検証済み要求へscope上限を適用し、一回限りの認可codeを発行する。
     pub async fn authorize(
         &self,
         principal: Principal,
@@ -218,6 +238,7 @@ impl AuthorizationServer {
         Ok(code)
     }
 
+    /// 主体とclientの保存値から、このresourceに有効なscope上限を作る。
     pub fn scope_ceilings(
         &self,
         principal: Vec<String>,
@@ -228,6 +249,7 @@ impl AuthorizationServer {
             .map_err(|_| AuthorizationError::InvalidScope)
     }
 
+    /// resourceが対応する全scopeを返す。
     pub fn supported_scopes(&self) -> &[String] {
         self.resource_policy.supported_scopes()
     }
@@ -237,6 +259,7 @@ impl AuthorizationServer {
         &self.resource_policy
     }
 
+    /// clientを解決して、未検証の認可要求を検証する。
     pub async fn validate_authorization_request(
         &self,
         request: &AuthorizationRequest,
@@ -247,6 +270,7 @@ impl AuthorizationServer {
         self.validate_resolved_authorization_request(request, resolved)
     }
 
+    /// 呼び出し側が解決したclientを使って認可要求を検証する。
     pub fn validate_resolved_authorization_request(
         &self,
         request: &AuthorizationRequest,
@@ -292,6 +316,7 @@ impl AuthorizationServer {
         })
     }
 
+    /// 保存済み登録またはClient ID Metadata Documentからclientを解決する。
     pub async fn resolve_authorization_client(
         &self,
         client_id: &str,
@@ -352,6 +377,7 @@ impl AuthorizationServer {
         })
     }
 
+    /// 認可codeとPKCE verifierを検証し、最初のtoken pairへ交換する。
     pub async fn exchange_authorization_code(
         &self,
         code: String,
@@ -398,6 +424,7 @@ impl AuthorizationServer {
         })
     }
 
+    /// refresh tokenを一回消費し、scopeを拡大せずにtoken pairを更新する。
     pub async fn refresh_access_token(
         &self,
         refresh_token: String,
@@ -453,6 +480,7 @@ impl AuthorizationServer {
         })
     }
 
+    /// resourceと期限が一致するaccess tokenから主体とscopeを復元する。
     pub async fn authenticate(
         &self,
         token: &str,
@@ -467,6 +495,7 @@ impl AuthorizationServer {
             .map_err(|_| AuthorizationError::Unavailable)
     }
 
+    /// 主体とclientの組に発行したtokenをすべて取り消す。
     pub async fn revoke(
         &self,
         principal: &Principal,
@@ -483,6 +512,7 @@ impl AuthorizationServer {
             .map_err(|_| AuthorizationError::Unavailable)
     }
 
+    /// RFC 7009形式のtoken取消をclient IDに制限して実行する。
     pub async fn revoke_token(
         &self,
         token: &str,
