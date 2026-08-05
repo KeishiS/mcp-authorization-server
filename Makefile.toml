@@ -48,7 +48,11 @@ args = ["audit", "--deny", "warnings"]
 
 [tasks.actionlint]
 command = "actionlint"
-args = [".github/workflows/ci.yml", ".github/workflows/security-audit.yml"]
+args = [
+    ".github/workflows/ci.yml",
+    ".github/workflows/release-gate.yml",
+    ".github/workflows/security-audit.yml",
+]
 
 [tasks.release-metadata]
 script_runner = "@shell"
@@ -71,3 +75,7 @@ dependencies = [
 
 [tasks.release-gate]
 dependencies = ["verify"]
+script_runner = "@shell"
+script = '''
+test -n "${MCP_AUTHORIZATION_SERVER_RELEASE_TAG:-}"
+'''

@@ -12,8 +12,9 @@ crates.ioへ公開するまでは、利用側がGit commit SHAを固定します
 . Issueへ変更理由、現在の動作、期待する動作を記録します。
 . 契約試験と文書を実装と同じPull Requestで更新します。
 . ``cargo make verify``を実行します。
-. Pull Requestをmergeしたcommitでrelease gateを実行します。
-. CHANGELOGの未公開表記を公開日に更新し、署名付きtagを作成します。
+. CHANGELOGの未公開表記を公開日へ更新し、リリース用Pull Requestをmergeします。
+. ``main``の先端を対象として``Release gate`` workflowを手動実行し、作成予定のtagを指定します。
+. release gateが成功したcommitへ署名付きtagを作成します。
 . 利用側ごとに依存revision更新のPull Requestを作り、その製品の契約試験を実行します。
 
 == セキュリティー修正
