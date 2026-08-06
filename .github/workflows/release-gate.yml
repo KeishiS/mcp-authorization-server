@@ -1,5 +1,5 @@
 name: Release gate
-run-name: "Release gate: ${{ inputs.release_tag || github.ref_name }}"
+run-name: "Release gate: ${{ github.event.inputs.release_tag || github.ref_name }}"
 
 on:
   push:
@@ -34,7 +34,7 @@ jobs:
       - name: Validate release target
         env:
           EVENT_NAME: ${{ github.event_name }}
-          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
+          RELEASE_TAG: ${{ github.event.inputs.release_tag || github.ref_name }}
         run: |
           set -eu
           test -n "$RELEASE_TAG"
