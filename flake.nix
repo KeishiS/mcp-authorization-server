@@ -38,6 +38,7 @@
           rustToolchain = pkgs.rust-bin.stable.${workspacePackage.rust-version}.default.override {
             extensions = [
               "clippy"
+              "llvm-tools-preview"
               "rustfmt"
             ];
           };
@@ -48,6 +49,7 @@
               rustToolchain
               pkgs.actionlint
               pkgs.cargo-audit
+              pkgs.cargo-llvm-cov
               pkgs.cargo-machete
               pkgs.cargo-make
               pkgs.jq
