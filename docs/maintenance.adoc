@@ -14,8 +14,37 @@ crates.ioへ公開するまでは、利用側がGit commit SHAを固定します
 . ``cargo make verify``を実行します。
 . CHANGELOGの未公開表記を公開日へ更新し、リリース用Pull Requestをmergeします。
 . ``main``の先端を対象として``Release gate`` workflowを手動実行し、作成予定のtagを指定します。
-. release gateが成功したcommitへ署名付きtagを作成します。
+. workflowが成功したことを確認し、ActionsのURL末尾にあるrun IDを記録します。
+. release gateが成功したcommitへ、run IDを含む注釈付きtagを作成します。Gitの署名鍵を管理している場合は
+  ``-a``の代わりに``-s``を使用します。
++
+[source,sh]
+----
+git tag -a v0.2.0 -m 'mcp-authorization-server v0.2.0' \
+  -m 'Release-Gate-Run: 123456789'
+git push origin v0.2.0
+----
++
+tagのpushで始まる``Release gate`` workflowは、注釈に記録したrunが、同じtag名とcommitを対象とする
+成功済みの手動実行であることをGitHub APIから確認します。その後に同じ自動検査を再実行します。
+この照合により、署名鍵を用いない場合も、GitHubのrepository書き込み権限とActionsの実行記録を
+公開元の証拠として使用できます。
 . 利用側ごとに依存revision更新のPull Requestを作り、その製品の契約試験を実行します。
+
+``v0.1.0``は手動実行したGitHub Release gateとの照合を導入する前に作成され、tagも署名されていません。
+既存tagは移動せず、この逸脱を履歴として残します。上記の検査は次のreleaseから適用します。
+
+== カバレッジ
+
+次のコマンドはworkspace全体のテストを実行し、``target/coverage``へLLVM JSONと概要を生成します。
+
+[source,sh]
+----
+nix develop --command cargo make coverage
+----
+
+通常CIは``coverage`` jobを独立して実行し、概要とJSONをartifactとして14日間保存します。導入時点では
+一律の合格率を設定しません。変更した責務の未実行箇所を調べるために使用します。
 
 == セキュリティー修正
 
