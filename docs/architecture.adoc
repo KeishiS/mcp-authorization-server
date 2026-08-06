@@ -1,0 +1,53 @@
+= 設計
+:toc:
+
+== 目的
+
+このworkspaceは、MCPサーバーへ組み込むOAuth Authorization Serverの状態遷移を一か所で保守します。
+一つのAuthorization Serverを複数製品がネットワーク越しに共有するdaemonではありません。各製品が
+同じライブラリーを自分のプロセスへ組み込み、resource、scope、token、grant、保存先を分離します。
+
+== 依存境界
+
+[cols="1,2,2",options="header"]
+|===
+|領域 |責務 |依存してよい対象
+
+|中核crate
+|protocol型、policy、metadata、認可code、token、refresh rotation、取消、repository port
+|標準ライブラリーと、暗号・直列化・URL処理に必要な小さな汎用crate
+
+|CIMD adapter
+|Client ID Metadata DocumentのHTTPS取得、cache、取得回数と同時実行の制限
+|中核crate、HTTP client、非同期runtime、logging
+
+|利用側アプリ
+|利用者認証、同意画面、HTTP、保存adapter、MCP操作認可
+|このworkspaceの公開APIと製品固有のadapter
+|===
+
+中核crateはHTTP framework、database driver、Identity Provider SDK、利用製品のcrateへ依存しません。
+CIMD adapterは中核crateへ依存しますが、中核crateからCIMD adapterへは依存しません。
+
+== 安全上の不変条件
+
+* 認可codeとrefresh tokenは一回だけ消費し、消費と次のtoken発行を同じtransactionで行います。
+* 使用済みtokenの再利用を検知した場合は、発行済みtokenを含むtoken family全体を失効させます。
+* access tokenは発行対象のresourceと期限が一致する場合だけ認証します。
+* scopeは対応scope、要求scope、主体上限、client上限の共通部分からだけ付与します。
+* 共通部分が空の場合は既定scopeを暗黙に付与しません。
+* 不透明tokenの保存実装は、平文ではなく一方向hashを保存します。
+* CIMD取得は公開IP addressだけへ接続し、DNS解決結果へ接続先を固定します。
+* CIMD取得はredirect、本文長、所要時間、同時実行数、時間当たりの回数、cache件数を制限します。
+
+``Repository``実装は、crateが提供する共有契約試験へ通す必要があります。SQL transactionやhash保存など、
+保存先に固有の実装条件は利用側でも追加試験を行います。
+
+== 非目標
+
+* OAuthまたはOpenID Connectによる利用者の本人確認
+* 同意画面とsession管理
+* 任意のOAuth grant typeへの対応
+* database adapterの同梱
+* scopeとMCP toolの対応付け
+* 複数製品間でのtoken共有

@@ -1,0 +1,27 @@
+[workspace]
+members = [
+    "crates/mcp-authorization-server",
+    "crates/mcp-authorization-server-cimd",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.97.1"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/KeishiS/mcp-authorization-server"
+homepage = "https://github.com/KeishiS/mcp-authorization-server"
+publish = false
+
+[workspace.dependencies]
+async-trait = "0.1.89"
+base64 = "0.22.1"
+reqwest = { version = "0.12.28", default-features = false, features = ["json", "rustls-tls-native-roots"] }
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.143"
+sha2 = "0.10.9"
+tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread", "sync"] }
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["fmt"] }
+url = "2.5.8"

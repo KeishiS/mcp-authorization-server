@@ -1,0 +1,22 @@
+= コントリビューションガイド
+
+== 開発環境
+
+Cargo manifestの``rust-version``で指定したRustを使用します。``cargo-make``、``cargo-audit``、
+``cargo-machete``、``actionlint``も必要です。
+
+== 変更手順
+
+. 作業内容をGitHub Issueへ記録します。
+. ``main``から目的が分かるbranchを作成します。
+. 実装と同時に、契約試験と関連文書を更新します。
+. ``cargo make verify``を実行します。
+. Pull Requestへ目的、主な差分、検証結果を記載します。
+
+``Repository``の契約、tokenの失効条件、resourceまたはscopeの判定、CIMDの取得境界を変更する場合は、
+外部から観察できる動作が変わらないrefactorでも回帰試験を追加してください。
+
+== GitHub上の操作
+
+``main``へ直接pushしません。Pull Requestを使用し、必須checkが成功した後にrebase方式でmergeします。
+release tagはrelease用Pull Requestのmerge後、対象commitのrelease gateが成功してから作成します。
