@@ -31,7 +31,7 @@ script_runner = "@shell"
 script = '''
 set -eu
 report_dir=target/coverage
-ignored_sources='(^|/)tests?(/|\.rs$)'
+ignored_sources='(^|/)(tests?(/|\.rs$)|testkit\.rs$)'
 mkdir -p "$report_dir"
 
 cargo llvm-cov clean --workspace
