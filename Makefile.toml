@@ -91,6 +91,10 @@ args = [
 script_runner = "@shell"
 script = "bash tools/check-release-metadata.sh"
 
+[tasks.release-provenance-check]
+script_runner = "@shell"
+script = "bash tools/test-verify-pre-tag-release-gate.sh"
+
 [tasks.verify]
 dependencies = [
     "fmt-check",
@@ -104,6 +108,7 @@ dependencies = [
     "security-audit",
     "actionlint",
     "release-metadata",
+    "release-provenance-check",
 ]
 
 [tasks.release-gate]
