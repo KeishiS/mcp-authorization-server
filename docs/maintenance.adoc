@@ -1,0 +1,27 @@
+= 保守手順
+
+== Version方針
+
+このworkspaceの二つのcrateは同じsemantic versionで管理します。v0.xでは公開APIの変更をminor versionで
+示します。安全性修正と互換性を保つ不具合修正はpatch versionで公開します。
+
+crates.ioへ公開するまでは、利用側がGit commit SHAを固定します。tagだけを依存指定の根拠にしません。
+
+== 通常の更新
+
+. Issueへ変更理由、現在の動作、期待する動作を記録します。
+. 契約試験と文書を実装と同じPull Requestで更新します。
+. ``cargo make verify``を実行します。
+. CHANGELOGの未公開表記を公開日へ更新し、リリース用Pull Requestをmergeします。
+. ``main``の先端を対象として``Release gate`` workflowを手動実行し、作成予定のtagを指定します。
+. release gateが成功したcommitへ署名付きtagを作成します。
+. 利用側ごとに依存revision更新のPull Requestを作り、その製品の契約試験を実行します。
+
+== セキュリティー修正
+
+. 非公開のsecurity advisoryで影響範囲と修正を管理します。
+. このworkspaceで回帰試験を追加し、修正版を先に公開します。
+. 利用側の依存revisionを修正commitへ更新します。
+. すべての利用側で配備可能になった後、必要な情報をadvisoryで公開します。
+
+利用側の更新が終わるまで、脆弱な入力例、token、client ID、内部URLなどを公開ログへ出しません。

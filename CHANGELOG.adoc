@@ -1,0 +1,11 @@
+= 変更履歴
+
+この文書には、利用側へ影響する変更だけを記録します。
+
+== 0.1.0 - 未公開
+
+=== 追加
+
+* 製品非依存のOAuth Authorization Server中核
+* 保存adapterへ適用できる共有repository契約試験
+* Client ID Metadata Documentを安全な境界内で取得するHTTP adapter
