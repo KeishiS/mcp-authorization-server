@@ -18,5 +18,14 @@ Cargo manifestの``rust-version``で指定したRustを使用します。``cargo
 
 == GitHub上の操作
 
-``main``へ直接pushしません。Pull Requestを使用し、必須checkが成功した後にrebase方式でmergeします。
+``main``へ直接pushしません。Pull Requestを使用し、必須checkが成功した後にsquash方式でmergeします。
+1つのPull Requestが``main``の1 commitに対応するため、``main``の履歴を一列で読めます。かわりに、作業
+ブランチで分けた個々のcommitは``main``へ残りません。残す必要がある変更は、Pull Requestを分けます。
+
+作業ブランチが``main``と衝突した場合は、force pushを避けるため``main``を作業ブランチへmergeして
+解消します。squash方式では、この解消用のmerge commitも``main``へは残りません。
+
+merge後にローカルの作業ブランチを消すときは、``git branch -D``を使います。squash方式では作業ブランチの
+commitが``main``に含まれないため、``git branch -d``は未mergeとして拒否します。
+
 release tagはrelease用Pull Requestのmerge後、対象commitのrelease gateが成功してから作成します。
